@@ -1,0 +1,61 @@
+name: Deploy preview
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Branch, tag, or commit in willchavez/willchavez-site to preview
+        required: true
+        default: master
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: willchavez/willchavez-site
+          ref: ${{ inputs.source_ref || 'master' }}
+          path: source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: source/app/package-lock.json
+      - name: Build site
+        run: sh source/app/build.sh
+      - name: Prepare project Pages paths
+        run: python3 scripts/prepare-preview.py source/app/dist
+      - name: Record preview source
+        run: |
+          SHA=$(git -C source rev-parse HEAD)
+          echo "Preview source: [willchavez/willchavez-site@$SHA](https://github.com/willchavez/willchavez-site/commit/$SHA)" >> "$GITHUB_STEP_SUMMARY"
+          printf '{"repository":"willchavez/willchavez-site","commit":"%s"}\n' "$SHA" > source/app/dist/preview-source.json
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: source/app/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
