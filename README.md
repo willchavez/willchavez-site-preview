@@ -30,4 +30,4 @@ The first build for a new encoder/dependency key is cold. Copy and style changes
 
 Measured with the same image set: the [cold run](https://github.com/willchavez/willchavez-site-preview/actions/runs/42538728481) took 6m18s; the following [CSS-only deployment](https://github.com/willchavez/willchavez-site-preview/actions/runs/42539318981) took 47s end to end, with a 9s Build site step and all 270 images reused. Runner availability and changed images can affect future timings.
 
-If Pages rejects a new deployment because an earlier one is stuck in progress, use the optional `cancel_deployment_id` workflow input with that Pages deployment ID. The deploy job cancels it using its scoped Pages permission before publishing. This is for explicit recovery, not cancellation of every previous deployment.
+If Pages temporarily rejects publishing because an earlier deployment is still in progress, rerun only the failed deploy job after it finishes. The existing artifact is reused, and the public-source check verifies that the requested preview actually became visible.

@@ -11,11 +11,6 @@ on:
         required: true
         default: master
         type: string
-      cancel_deployment_id:
-        description: Cancel a stuck Pages deployment before publishing (optional)
-        required: false
-        default: ''
-        type: string
 
 permissions:
   contents: read
@@ -83,12 +78,6 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Cancel stuck Pages deployment
-        if: inputs.cancel_deployment_id != ''
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PAGES_DEPLOYMENT_ID: ${{ inputs.cancel_deployment_id }}
-        run: gh api --method POST "repos/${GITHUB_REPOSITORY}/pages/deployments/${PAGES_DEPLOYMENT_ID}/cancel"
       - uses: actions/deploy-pages@v4
         id: deployment
       - name: Verify published source
