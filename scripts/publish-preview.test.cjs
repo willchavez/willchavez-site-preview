@@ -6,7 +6,7 @@ function fixture({ stale = 0, busy = 0, permanent = false } = {}) {
   const versions = [], logs = [];
   let checks = 0, creates = 0;
   const args = {
-    sourceSha, context: { repo: { owner: 'willchavez', repo: 'willchavez-site-preview' }, runId: 42, runAttempt: 1 },
+    sourceSha, context: { repo: { owner: 'willchavez', repo: 'willchavez-site-preview' }, sha: 'c'.repeat(40), runId: 42, runAttempt: 1 },
     core: { getIDToken: async () => 'private-oidc-token', setSecret: () => {}, info: v => logs.push(v), warning: v => logs.push(v), setOutput: () => {} },
     github: { rest: { actions: { listWorkflowRunArtifacts: async () => ({ data: { artifacts: [{ id: 9, name: 'github-pages', expired: false }] } }) } }, request: async (route, params) => {
       if (route.startsWith('POST')) {
@@ -24,22 +24,22 @@ function fixture({ stale = 0, busy = 0, permanent = false } = {}) {
   };
   return { args, versions, logs };
 }
-test('unique versions across source, workflow retries, and redeployments; secrets stay out of logs', async () => {
-  const a = fixture(), b = fixture();b.args.context.runAttempt = 2;
-  const first = await publishPreview(a.args), retry = await publishPreview(b.args);
-  assert.notEqual(first.version, retry.version);
-  assert.equal(first.sourceSha, sourceSha);
-  assert.equal(a.logs.some(v => v.includes('private-oidc-token')), false);
+test('publish a known workflow commit and keep identity tokens out of logs', async () => {
+  const f = fixture();
+  const result = await publishPreview(f.args);
+  assert.equal(result.version, f.args.context.sha);
+  assert.equal(result.sourceSha, sourceSha);
+  assert.equal(f.logs.some(v => v.includes('private-oidc-token')), false);
 });
 test('wait for a busy Pages deployment and verify the publicly served source', async () => {
   const f = fixture({ busy: 1, stale: 1 });
   assert.equal((await publishPreview(f.args)).sourceSha, sourceSha);
 });
-test('a falsely successful deployment gets a fresh version before it can succeed', async () => {
+test('a falsely successful deployment is republished before it can succeed', async () => {
   const f = fixture({ stale: 2 });
   await publishPreview(f.args);
   assert.equal(f.versions.length, 2);
-  assert.notEqual(f.versions[0], f.versions[1]);
+  assert.equal(f.versions[0], f.args.context.sha);
 });
 test('never report success when the public marker stays stale', async () => {
   const f = fixture({ stale: 100 });

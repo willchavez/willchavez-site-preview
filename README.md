@@ -34,6 +34,6 @@ If Pages temporarily rejects publishing because an earlier deployment is still i
 
 ## Verified publishing
 
-The publisher uses GitHub’s Pages deployment API with a unique build version derived from the source SHA, workflow run, run attempt, and publish attempt. Repeated previews no longer share the workflow repository’s commit as their deployment identity. It waits through temporary busy responses and polls deployment status, then checks the public source marker. If Pages reports success while the public source remains stale, it retries once with another unique version. It fails instead of claiming success if the public source never matches.
+The publisher uses GitHub’s Pages deployment API with the workflow commit required by Pages. It waits through temporary busy responses and polls deployment status, then verifies the public source marker against the separately selected source commit. If Pages reports success while the public source remains stale, it waits and retries the artifact once. It fails instead of claiming success if the public source never matches. Infrastructure pushes do not automatically publish a baseline over the requested preview.
 
-Publisher regression checks: `node --test scripts/publish-preview.test.cjs`. The tests exercise unique run versions, a busy deployment, stale public output, and permission failures. They do not change production hosting.
+Publisher regression checks: `node --test scripts/publish-preview.test.cjs`. The tests exercise supported build versions, a busy deployment, stale public output, and permission failures. They do not change production hosting.

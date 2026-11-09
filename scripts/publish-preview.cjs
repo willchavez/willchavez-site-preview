@@ -1,7 +1,5 @@
-const { createHash } = require('node:crypto');
-
-// Use a distinct Pages build version for every publish attempt. The workflow's
-// own commit is often unchanged while source_ref points at different site code.
+// Publish with GitHub's workflow commit as required by Pages, but treat the
+// publicly served source marker as the final authority on deployment success.
 async function publishPreview({ github, core, context, sourceSha, fetchPublic = fetch,
   wait = ms => new Promise(resolve => setTimeout(resolve, ms)),
   createAttempts = 12, statusAttempts = 60, publicAttempts = 24 }) {
@@ -14,7 +12,7 @@ async function publishPreview({ github, core, context, sourceSha, fetchPublic = 
   const pageUrl = `https://${repo.owner.toLowerCase()}.github.io/${repo.repo}/`;
   const terminal = new Set(['deployment_failed', 'deployment_content_failed', 'deployment_cancelled', 'deployment_lost']);
   for (let publish = 1; publish <= 2; publish++) {
-    const version = createHash('sha1').update(`${sourceSha}:${context.runId}:${runAttempt}:${publish}`).digest('hex');
+    const version = context.sha;
     const idToken = await core.getIDToken();
     core.setSecret(idToken);
     let deployment;
@@ -33,7 +31,7 @@ async function publishPreview({ github, core, context, sourceSha, fetchPublic = 
       }
     }
     const id = deployment.id || deployment.status_url?.split('/').pop() || version;
-    core.info(`Publishing source ${sourceSha} with unique Pages version ${version}`);
+    core.info(`Publishing source ${sourceSha} with Pages build version ${version}`);
     let succeeded = false;
     for (let poll = 0; poll < statusAttempts; poll++) {
       const { data: status } = await github.request('GET /repos/{owner}/{repo}/pages/deployments/{deployment_id}', { ...repo, deployment_id: id });
@@ -58,7 +56,7 @@ async function publishPreview({ github, core, context, sourceSha, fetchPublic = 
       } catch { /* A temporarily missing public marker is retried. */ }
       await wait(5000);
     }
-    core.warning('Pages reported success but the public source is stale; retrying once with a fresh build version.');
+    core.warning('Pages reported success but the public source is stale; waiting and retrying the verified artifact once.');
   }
   throw new Error('Public preview never matched the requested source commit; refusing to report success');
 }
