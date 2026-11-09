@@ -12,7 +12,7 @@ Push proposed changes to a branch in `willchavez/willchavez-site`, then open **A
 gh workflow run preview.yml --repo willchavez/willchavez-site-preview -f source_ref=COMMIT_SHA
 ```
 
-Wait for the workflow to finish, then open the review site. Each deployment replaces the previous preview. `preview-source.json` and the build summary record the source commit. Pushes to this repository's `main` deploy the source repository's `master` as a baseline.
+Wait for the workflow to finish, then open the review site. Each deployment replaces the previous preview. `preview-source.json` and the build summary record the source commit. Pushes to this repository's `main` deploy the source repository's `master` as a baseline, except workflow-only and README-only changes. Publish workflow changes with an explicit `source_ref` so they do not replace an active preview with the baseline.
 
 After review and explicit approval, merge the source changes into `master` in `willchavez/willchavez-site`. Its existing workflow publishes production.
 
@@ -21,3 +21,9 @@ After review and explicit approval, merge the source changes into `master` in `w
 In **Settings → Pages**, set Source to **GitHub Actions**. Do not set a custom domain. The workflow uses the standard `GITHUB_TOKEN`; it needs no cross-repository write token because the source is public.
 
 The adapter rewrites built navigation and asset paths for the project subdirectory, removes the production `CNAME`, and marks HTML pages `noindex`. Canonical metadata continues to identify production. Preview content is public; `noindex` is a search-engine hint, not access control.
+
+## Build caching
+
+The workflow restores and saves `source/app/.cache/responsive-images` with GitHub Actions Cache. Cache keys include the platform, image encoder implementation and dependency lockfile, and source image bytes. A fallback restores the previous asset set so adding or editing an image only encodes the changed images. The image builder also hashes every source file and encoder version, preventing stale variants when an image is edited under the same name. Deleted sources are omitted from the fresh output.
+
+The first build for a new encoder/dependency key is cold. Copy and style changes reuse the encoded images on subsequent runs; all HTML is still rebuilt and the normal Pages deployment is preserved. Image-cache tests run before publishing.

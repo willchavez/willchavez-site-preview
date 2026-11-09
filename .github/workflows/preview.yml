@@ -3,6 +3,7 @@ name: Deploy preview
 on:
   push:
     branches: [main]
+    paths-ignore: [".github/workflows/**", "README.md"]
   workflow_dispatch:
     inputs:
       source_ref:
@@ -34,8 +35,24 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: source/app/package-lock.json
+      - name: Restore responsive images
+        id: images-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: source/app/.cache/responsive-images
+          key: responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/package-lock.json') }}-${{ hashFiles('source/app/public/uploads/**', 'source/img/portfolio/**') }}
+          restore-keys: |
+            responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/package-lock.json') }}-
       - name: Build site
         run: sh source/app/build.sh
+      - name: Check image caching
+        run: node --test source/app/scripts/images.test.mjs
+      - name: Save responsive images
+        if: steps.images-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: source/app/.cache/responsive-images
+          key: ${{ steps.images-cache.outputs.cache-primary-key }}
       - name: Prepare project Pages paths
         run: python3 scripts/prepare-preview.py source/app/dist
       - name: Record preview source
