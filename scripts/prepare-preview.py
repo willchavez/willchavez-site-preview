@@ -20,7 +20,24 @@ def css_urls(text):
                   lambda m: m[1] + prefix(m[2]), text, flags=re.I)
 
 
+def remove_legacy_analytics(text):
+    """Old copied pages retain classic GA snippets; preview must not collect."""
+    def script(match):
+        attrs, body = match.group(1), match.group(2)
+        # Modern module scripts perform their own production-host check and may
+        # share application code. Never strip those modules.
+        if re.search(r"\btype\s*=\s*['\"]module['\"]", attrs, re.I):
+            return match.group(0)
+        if re.search(r"\bsrc\s*=\s*['\"]https://www\.googletagmanager\.com/gtag/js", attrs, re.I):
+            return ''
+        if re.search(r"function\s+gtag\s*\(", body) and re.search(r"gtag\s*\(\s*['\"]config['\"]", body):
+            return ''
+        return match.group(0)
+    return re.sub(r'<script\b([^>]*)>(.*?)</script\s*>', script, text, flags=re.I | re.S)
+
+
 def html_urls(text):
+    text = remove_legacy_analytics(text)
     def attribute(m):
         value = m[3]
         if m[1].strip().lower().startswith("srcset"):

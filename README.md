@@ -37,3 +37,5 @@ If Pages temporarily rejects publishing because an earlier deployment is still i
 The publisher uses GitHub’s Pages deployment API with the workflow commit required by Pages. It waits through temporary busy responses and polls deployment status, then verifies the public source marker against the separately selected source commit. If Pages reports success while the public source remains stale, it waits and retries the artifact once. It fails instead of claiming success if the public source never matches. Infrastructure pushes do not automatically publish a baseline over the requested preview.
 
 Publisher regression checks: `node --test scripts/publish-preview.test.cjs`. The tests exercise supported build versions, a busy deployment, stale public output, and permission failures. They do not change production hosting.
+
+Preview adaptation also removes classic Google tag loader/init snippets from copied legacy HTML pages. Modern module scripts remain intact and use the site's production-host guard. This keeps preview review traffic out of the production Analytics property, including legacy routes. Adapter checks: `python3 scripts/test_prepare_preview.py`.

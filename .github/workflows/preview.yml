@@ -54,6 +54,8 @@ jobs:
         with:
           path: source/app/.cache/responsive-images
           key: ${{ steps.images-cache.outputs.cache-primary-key }}
+      - name: Check preview adapter
+        run: python3 scripts/test_prepare_preview.py
       - name: Prepare project Pages paths
         run: python3 scripts/prepare-preview.py source/app/dist
       - name: Record preview source
