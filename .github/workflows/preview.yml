@@ -22,6 +22,8 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      source-sha: ${{ steps.source.outputs.sha }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/checkout@v4
@@ -56,8 +58,10 @@ jobs:
       - name: Prepare project Pages paths
         run: python3 scripts/prepare-preview.py source/app/dist
       - name: Record preview source
+        id: source
         run: |
           SHA=$(git -C source rev-parse HEAD)
+          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
           echo "Preview source: [willchavez/willchavez-site@$SHA](https://github.com/willchavez/willchavez-site/commit/$SHA)" >> "$GITHUB_STEP_SUMMARY"
           printf '{"repository":"willchavez/willchavez-site","commit":"%s"}\n' "$SHA" > source/app/dist/preview-source.json
       - uses: actions/upload-pages-artifact@v3
@@ -76,3 +80,19 @@ jobs:
     steps:
       - uses: actions/deploy-pages@v4
         id: deployment
+      - name: Verify published source
+        env:
+          EXPECTED_SOURCE_SHA: ${{ needs.build.outputs.source-sha }}
+          PREVIEW_URL: ${{ steps.deployment.outputs.page_url }}
+        run: |
+          for attempt in $(seq 1 12); do
+            ACTUAL_SOURCE_SHA=$(curl --fail --silent --show-error --max-time 15 -H 'Cache-Control: no-cache' "${PREVIEW_URL}preview-source.json?run=${GITHUB_RUN_ID}-${attempt}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"])' || true)
+            if [ "$ACTUAL_SOURCE_SHA" = "$EXPECTED_SOURCE_SHA" ]; then
+              echo "Verified published source: $EXPECTED_SOURCE_SHA"
+              exit 0
+            fi
+            echo "Waiting for published source ($attempt/12): expected $EXPECTED_SOURCE_SHA, received $ACTUAL_SOURCE_SHA"
+            sleep 5
+          done
+          echo "::error::Pages reported success but the public preview is still serving a different source commit."
+          exit 1

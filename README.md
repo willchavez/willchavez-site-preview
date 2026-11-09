@@ -12,7 +12,7 @@ Push proposed changes to a branch in `willchavez/willchavez-site`, then open **A
 gh workflow run preview.yml --repo willchavez/willchavez-site-preview -f source_ref=COMMIT_SHA
 ```
 
-Wait for the workflow to finish, then open the review site. Each deployment replaces the previous preview. `preview-source.json` and the build summary record the source commit. Pushes to this repository's `main` deploy the source repository's `master` as a baseline, except workflow-only and README-only changes. Publish workflow changes with an explicit `source_ref` so they do not replace an active preview with the baseline.
+Wait for the workflow to finish, then open the review site. Each deployment replaces the previous preview. `preview-source.json` and the build summary record the source commit. After Pages deploys, the workflow checks that the public marker matches the requested source commit and fails if the old version remains visible. Pushes to this repository's `main` deploy the source repository's `master` as a baseline, except workflow-only and README-only changes. Publish workflow changes with an explicit `source_ref` so they do not replace an active preview with the baseline.
 
 After review and explicit approval, merge the source changes into `master` in `willchavez/willchavez-site`. Its existing workflow publishes production.
 
