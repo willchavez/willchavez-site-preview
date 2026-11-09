@@ -31,3 +31,9 @@ The first build for a new encoder/dependency key is cold. Copy and style changes
 Measured with the same image set: the [cold run](https://github.com/willchavez/willchavez-site-preview/actions/runs/42538728481) took 6m18s; the following [CSS-only deployment](https://github.com/willchavez/willchavez-site-preview/actions/runs/42539318981) took 47s end to end, with a 9s Build site step and all 270 images reused. Runner availability and changed images can affect future timings.
 
 If Pages temporarily rejects publishing because an earlier deployment is still in progress, rerun only the failed deploy job after it finishes. The existing artifact is reused, and the public-source check verifies that the requested preview actually became visible.
+
+## Verified publishing
+
+The publisher uses GitHub’s Pages deployment API with a unique build version derived from the source SHA, workflow run, run attempt, and publish attempt. Repeated previews no longer share the workflow repository’s commit as their deployment identity. It waits through temporary busy responses and polls deployment status, then checks the public source marker. If Pages reports success while the public source remains stale, it retries once with another unique version. It fails instead of claiming success if the public source never matches.
+
+Publisher regression checks: `node --test scripts/publish-preview.test.cjs`. The tests exercise unique run versions, a busy deployment, stale public output, and permission failures. They do not change production hosting.

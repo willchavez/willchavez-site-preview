@@ -45,6 +45,8 @@ jobs:
           key: responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/package-lock.json') }}-${{ hashFiles('source/app/public/uploads/**', 'source/img/portfolio/**') }}
           restore-keys: |
             responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/package-lock.json') }}-
+      - name: Check preview publisher
+        run: node --test scripts/publish-preview.test.cjs
       - name: Build site
         run: sh source/app/build.sh
       - name: Check image caching
@@ -72,27 +74,21 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+      actions: read
       pages: write
       id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - name: Publish and verify preview
+        uses: actions/github-script@v7
         id: deployment
-      - name: Verify published source
         env:
           EXPECTED_SOURCE_SHA: ${{ needs.build.outputs.source-sha }}
-          PREVIEW_URL: ${{ steps.deployment.outputs.page_url }}
-        run: |
-          for attempt in $(seq 1 12); do
-            ACTUAL_SOURCE_SHA=$(curl --fail --silent --show-error --max-time 15 -H 'Cache-Control: no-cache' "${PREVIEW_URL}preview-source.json?run=${GITHUB_RUN_ID}-${attempt}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["commit"])' || true)
-            if [ "$ACTUAL_SOURCE_SHA" = "$EXPECTED_SOURCE_SHA" ]; then
-              echo "Verified published source: $EXPECTED_SOURCE_SHA"
-              exit 0
-            fi
-            echo "Waiting for published source ($attempt/12): expected $EXPECTED_SOURCE_SHA, received $ACTUAL_SOURCE_SHA"
-            sleep 5
-          done
-          echo "::error::Pages reported success but the public preview is still serving a different source commit."
-          exit 1
+        with:
+          script: |
+            const { publishPreview } = require('./scripts/publish-preview.cjs');
+            await publishPreview({ github, core, context, sourceSha: process.env.EXPECTED_SOURCE_SHA });
