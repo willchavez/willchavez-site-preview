@@ -2,7 +2,7 @@
 // publicly served source marker as the final authority on deployment success.
 async function publishPreview({ github, core, context, sourceSha, fetchPublic = fetch,
   wait = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  createAttempts = 12, statusAttempts = 60, publicAttempts = 24 }) {
+  createAttempts = 12, statusAttempts = 120, publicAttempts = 24 }) {
   if (!/^[a-f0-9]{40}$/.test(sourceSha)) throw new Error('Expected a full source commit SHA');
   const repo = context.repo;
   const runAttempt = context.runAttempt ?? process.env.GITHUB_RUN_ATTEMPT ?? 1;
