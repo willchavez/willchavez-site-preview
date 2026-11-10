@@ -3,6 +3,7 @@
 Production source and canonical URLs remain unchanged. Run on fresh build output.
 """
 import re
+import json
 import sys
 from pathlib import Path
 
@@ -70,6 +71,12 @@ def main(root):
         if path.suffix in {".html", ".js", ".mjs"}:
             text = js_path.sub(lambda m: m[1] + prefix(m[2]), text)
         path.write_text(text)
+    # The viewer looks up the prefixed image URL in this map and fetches its
+    # video from the same project Pages base path.
+    manifest = root / "animation-media.json"
+    if manifest.exists():
+        mapping = json.loads(manifest.read_text())
+        manifest.write_text(json.dumps({prefix(key): prefix(value) for key, value in mapping.items()}))
     (root / "CNAME").unlink(missing_ok=True)
     (root / ".nojekyll").touch()
 

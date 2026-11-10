@@ -39,11 +39,14 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: source/app/.cache/responsive-images
-          key: responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/package-lock.json') }}-${{ hashFiles('source/app/public/uploads/**', 'source/img/portfolio/**') }}
+          key: responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/scripts/animations.mjs', 'source/app/package-lock.json') }}-${{ hashFiles('source/app/public/**', 'source/img/portfolio/**') }}
           restore-keys: |
-            responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/package-lock.json') }}-
+            responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('source/app/scripts/images.mjs', 'source/app/scripts/animations.mjs', 'source/app/package-lock.json') }}-
+            responsive-images-v1-${{ runner.os }}-${{ runner.arch }}-
       - name: Check preview publisher
         run: node --test scripts/publish-preview.test.cjs
+      - name: Ensure animation encoder is available
+        run: command -v ffmpeg || (sudo apt-get update && sudo apt-get install -y ffmpeg)
       - name: Build site
         run: sh source/app/build.sh
       - name: Check image caching
